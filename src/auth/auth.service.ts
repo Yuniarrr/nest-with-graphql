@@ -38,6 +38,7 @@ export class AuthService {
         access_token,
         refresh_token,
         user,
+        message: 'Successfully signed up',
       };
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -88,6 +89,7 @@ export class AuthService {
         access_token,
         refresh_token,
         user,
+        message: 'Successfully signed in',
       };
     } catch (error) {
       throw error;

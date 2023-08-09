@@ -33,11 +33,12 @@
      ```bash
      # example
      mutation SignUp($input:SignUpInput!) {
-       signup(signUpInput: $input) {
-       access_token
-       refresh_token
-       user{email username}
-     }}
+        signup(signUpInput: $input) {
+          access_token
+          refresh_token
+          user{email username}
+          message
+      }}
 
      # query variables
      {
@@ -55,9 +56,10 @@
      # example
      mutation SignIn($input:SignInInput!){
       signin(signInInput: $input) {
-      access_token
-      refresh_token
-      user{email username}
+        access_token
+        refresh_token
+        user{email username}
+        message
      }}
 
      # query variables

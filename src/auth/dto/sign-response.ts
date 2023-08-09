@@ -14,4 +14,8 @@ export class SignResponse {
 
   @Field(() => User)
   user: User;
+
+  @Field()
+  @IsString()
+  message: string;
 }

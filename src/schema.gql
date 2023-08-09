@@ -30,6 +30,7 @@ input SignInInput {
 
 type SignResponse {
   access_token: String!
+  message: String!
   refresh_token: String!
   user: User!
 }
