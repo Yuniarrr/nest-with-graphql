@@ -81,6 +81,22 @@ export class AuthService {
     }
   }
 
+  async logout(user_id: number) {
+    await this.prisma.user.updateMany({
+      where: {
+        id: user_id,
+        hashed_refresh_token: {
+          not: null,
+        },
+      },
+      data: {
+        hashed_refresh_token: null,
+      },
+    });
+
+    return { logged_out: true };
+  }
+
   findAll() {
     return `This action returns all auth`;
   }
