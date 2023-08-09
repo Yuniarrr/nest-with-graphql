@@ -1,11 +1,10 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
-import { SignUpInput } from './dto/signup-input.input';
-import { UpdateAuthInput } from './dto/update-auth.input';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as argon from 'argon2';
+import { SignUpInput, SignInInput, UpdateAuthInput } from './dto';
 
 @Injectable()
 export class AuthService {
@@ -14,6 +13,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
   ) {}
+
   async signup(signUpInput: SignUpInput) {
     try {
       const hashedPassword = await argon.hash(signUpInput.password);
@@ -41,6 +41,42 @@ export class AuthService {
           throw new ForbiddenException('Credentials taken');
         }
       }
+      throw error;
+    }
+  }
+
+  async signin(signInInput: SignInInput) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: {
+          email: signInInput.email,
+        },
+      });
+
+      if (!user) {
+        throw new ForbiddenException('Credentials invalid');
+      }
+      const isMatch = await argon.verify(
+        user.hashed_password,
+        signInInput.password,
+      );
+
+      if (!isMatch) {
+        throw new ForbiddenException('Credentials invalid');
+      }
+
+      const { access_token, refresh_token } = await this.createTokens(
+        user.id,
+        user.email,
+      );
+      await this.updateRefreshToken(user.email, refresh_token);
+
+      return {
+        access_token,
+        refresh_token,
+        user,
+      };
+    } catch (error) {
       throw error;
     }
   }
