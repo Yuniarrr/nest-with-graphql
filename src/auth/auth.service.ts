@@ -4,7 +4,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as argon from 'argon2';
-import { SignUpInput, SignInInput, UpdateAuthInput } from './dto';
+import { SignUpInput, SignInInput } from './dto';
 
 @Injectable()
 export class AuthService {
@@ -14,9 +14,11 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
+  // for sign up
   async signup(signUpInput: SignUpInput) {
     try {
       const hashedPassword = await argon.hash(signUpInput.password);
+      // Create user
       const user = await this.prisma.user.create({
         data: {
           username: signUpInput.username,
@@ -24,10 +26,12 @@ export class AuthService {
           email: signUpInput.email,
         },
       });
+      // Create tokens
       const { access_token, refresh_token } = await this.createTokens(
         user.id,
         user.email,
       );
+      // Update refresh token
       await this.updateRefreshToken(user.email, refresh_token);
 
       return {
@@ -37,6 +41,7 @@ export class AuthService {
       };
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        // Unique constraint failed
         if (error.code === 'P2002') {
           throw new ForbiddenException('Credentials taken');
         }
@@ -45,30 +50,38 @@ export class AuthService {
     }
   }
 
+  // for sign in
   async signin(signInInput: SignInInput) {
     try {
+      // Find user
       const user = await this.prisma.user.findUnique({
         where: {
           email: signInInput.email,
         },
       });
 
+      // Check if user exists
       if (!user) {
         throw new ForbiddenException('Credentials invalid');
       }
+
+      // Check if password matches
       const isMatch = await argon.verify(
         user.hashed_password,
         signInInput.password,
       );
 
+      // Check if password matches
       if (!isMatch) {
         throw new ForbiddenException('Credentials invalid');
       }
 
+      // Create tokens
       const { access_token, refresh_token } = await this.createTokens(
         user.id,
         user.email,
       );
+      // Update refresh token
       await this.updateRefreshToken(user.email, refresh_token);
 
       return {
@@ -82,19 +95,24 @@ export class AuthService {
   }
 
   async logout(user_id: number) {
-    await this.prisma.user.updateMany({
-      where: {
-        id: user_id,
-        hashed_refresh_token: {
-          not: null,
+    try {
+      // check id and delete refresh token
+      await this.prisma.user.updateMany({
+        where: {
+          id: user_id,
+          hashed_refresh_token: {
+            not: null,
+          },
         },
-      },
-      data: {
-        hashed_refresh_token: null,
-      },
-    });
+        data: {
+          hashed_refresh_token: null,
+        },
+      });
 
-    return { logged_out: true };
+      return { logged_out: true };
+    } catch (error) {
+      throw error;
+    }
   }
 
   findAll() {
@@ -103,10 +121,6 @@ export class AuthService {
 
   findOne(id: number) {
     return `This action returns a #${id} auth`;
-  }
-
-  update(id: number, updateAuthInput: UpdateAuthInput) {
-    return `This action updates a #${id} auth`;
   }
 
   remove(id: number) {
